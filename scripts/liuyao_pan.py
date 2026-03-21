@@ -102,6 +102,24 @@ DI_ZHI_CANG_GAN = {
     '酉': ['辛'], '戌': ['戊', '辛', '丁'], '亥': ['壬', '甲']
 }
 
+# 月令（按月支）
+YUE_LING = {
+    '寅': '春', '卯': '春', '辰': '春',
+    '巳': '夏', '午': '夏', '未': '夏',
+    '申': '秋', '酉': '秋', '戌': '秋',
+    '亥': '冬', '子': '冬', '丑': '冬'
+}
+
+# 六神断语
+LIU_SHEN_DUAN = {
+    '青龙': {'吉': '喜庆临门，贵人相助', '凶': '乐极生悲，防过喜伤身'},
+    '朱雀': {'吉': '文书有利，口舌生财', '凶': '口舌是非，防小人'},
+    '勾陈': {'吉': '田土有利，稳定发展', '凶': '事多迟滞，防牵连'},
+    '螣蛇': {'吉': '变化中求机', '凶': '虚惊怪异，防欺骗'},
+    '白虎': {'吉': '武职有利，果断行事', '凶': '血光疾病，防意外'},
+    '玄武': {'吉': '谋略得当，暗中得利', '凶': '防盗防骗，防暧昧'}
+}
+
 # 天干五行
 TIAN_GAN_WUXING = {
     '甲': '木', '乙': '木', '丙': '火', '丁': '火', '戊': '土',
@@ -380,6 +398,189 @@ class LiuYaoPan:
             return '火天大有'
         
         return '待计算'
+    
+    @classmethod
+    def get_wang_shuai(cls, yao_wuxing: str, month_zhi: str, day_zhi: str) -> str:
+        """
+        判断爻的旺衰（基于月令和日辰）
+        """
+        month_wuxing = DI_ZHI_WUXING.get(month_zhi, '土')
+        day_wuxing = DI_ZHI_WUXING.get(day_zhi, '土')
+        
+        # 得月令为旺
+        if yao_wuxing == month_wuxing:
+            return '旺'
+        # 月令生爻为相
+        elif WUXING_SHENG.get(yao_wuxing) == month_wuxing:
+            return '相'
+        # 克月令为休
+        elif WUXING_KE.get(yao_wuxing) == month_wuxing:
+            return '休'
+        # 被月令克为囚
+        elif WUXING_KE.get(month_wuxing) == yao_wuxing:
+            return '囚'
+        # 月令克爻为死
+        else:
+            return '死'
+    
+    @classmethod
+    def get_shi_ying_relation(cls, shi_wuxing: str, ying_wuxing: str) -> Dict:
+        """
+        分析世应关系
+        """
+        if shi_wuxing == ying_wuxing:
+            return {'关系': '比和', '吉凶': '平', '说明': '势均力敌，需努力争取'}
+        elif WUXING_SHENG.get(shi_wuxing) == ying_wuxing:
+            return {'关系': '世生应', '吉凶': '凶', '说明': '我生对方，付出多回报少'}
+        elif WUXING_SHENG.get(ying_wuxing) == shi_wuxing:
+            return {'关系': '应生世', '吉凶': '吉', '说明': '对方生我，贵人相助'}
+        elif WUXING_KE.get(shi_wuxing) == ying_wuxing:
+            return {'关系': '世克应', '吉凶': '平', '说明': '我克对方，主动可控'}
+        elif WUXING_KE.get(ying_wuxing) == shi_wuxing:
+            return {'关系': '应克世', '吉凶': '凶', '说明': '对方克我，压力大阻力大'}
+        return {'关系': '未知', '吉凶': '平', '说明': '关系不明'}
+    
+    @classmethod
+    def get_liu_shen_duan(cls, liu_shen: str, ji_xiong: str) -> str:
+        """获取六神断语"""
+        return LIU_SHEN_DUAN.get(liu_shen, {}).get(ji_xiong, '待分析')
+    
+    @classmethod
+    def analyze_duan_gua(cls, result: Dict) -> Dict:
+        """
+        完整断卦分析
+        """
+        yao_list = result.get('六爻', [])
+        yong_shen = result.get('用神', '妻财')
+        month_zhi = result.get('月支', '子')
+        day_zhi = result.get('日支', '子')
+        shi_yao = result.get('世爻', 1)
+        ying_yao = result.get('应爻', 4)
+        
+        # 找用神爻
+        yong_shen_yao = None
+        for yao in yao_list:
+            if yao['六亲'] == yong_shen:
+                yong_shen_yao = yao
+                break
+        
+        # 用神旺衰
+        yong_shen_wang_shuai = '平'
+        if yong_shen_yao:
+            yong_shen_wang_shuai = cls.get_wang_shuai(
+                yong_shen_yao['五行'], month_zhi, day_zhi
+            )
+        
+        # 世应关系
+        shi_yao_info = None
+        ying_yao_info = None
+        for yao in yao_list:
+            if yao['爻位'] == shi_yao:
+                shi_yao_info = yao
+            if yao['爻位'] == ying_yao:
+                ying_yao_info = yao
+        
+        shi_ying_relation = {'关系': '未知', '吉凶': '平', '说明': '待分析'}
+        if shi_yao_info and ying_yao_info:
+            shi_ying_relation = cls.get_shi_ying_relation(
+                shi_yao_info['五行'], ying_yao_info['五行']
+            )
+        
+        # 动爻分析
+        dong_yao_list = [y for y in yao_list if y.get('动爻', False)]
+        dong_yao_duan = []
+        for dy in dong_yao_list:
+            if dy['六亲'] == yong_shen:
+                dong_yao_duan.append(f"用神动，变化中求机会")
+            elif dy['六亲'] == '兄弟':
+                dong_yao_duan.append(f"兄弟动，防破财竞争")
+            elif dy['六亲'] == '官鬼':
+                dong_yao_duan.append(f"官鬼动，防压力是非")
+            elif dy['六亲'] == '父母':
+                dong_yao_duan.append(f"父母动，文书有利")
+            elif dy['六亲'] == '子孙':
+                dong_yao_duan.append(f"子孙动，财源广进")
+            elif dy['六亲'] == '妻财':
+                dong_yao_duan.append(f"妻财动，财运变化")
+        
+        # 六神断语
+        liu_shen_duan = []
+        if yong_shen_yao:
+            ji_xiong = '吉' if yong_shen_wang_shuai in ['旺', '相'] else '凶'
+            liu_shen_duan.append(
+                f"{yong_shen_yao['六神']}临用神：{cls.get_liu_shen_duan(yong_shen_yao['六神'], ji_xiong)}"
+            )
+        
+        # 吉凶评分（0-100）
+        score = 50
+        if yong_shen_wang_shuai == '旺':
+            score += 20
+        elif yong_shen_wang_shuai == '相':
+            score += 10
+        elif yong_shen_wang_shuai == '死':
+            score -= 20
+        elif yong_shen_wang_shuai == '囚':
+            score -= 10
+        
+        if shi_ying_relation['吉凶'] == '吉':
+            score += 15
+        elif shi_ying_relation['吉凶'] == '凶':
+            score -= 15
+        
+        if dong_yao_list:
+            # 有动爻，看吉凶
+            for dy in dong_yao_list:
+                if dy['六亲'] in ['子孙', '妻财']:
+                    score += 5
+                elif dy['六亲'] in ['兄弟', '官鬼']:
+                    score -= 5
+        
+        score = max(0, min(100, score))
+        
+        # 吉凶判断
+        if score >= 70:
+            ji_xiong_pan_duan = '大吉'
+            jian_yi = '卦象大吉，宜积极行动，把握良机'
+        elif score >= 55:
+            ji_xiong_pan_duan = '吉'
+            jian_yi = '卦象偏吉，可顺势而为，注意细节'
+        elif score >= 45:
+            ji_xiong_pan_duan = '平'
+            jian_yi = '卦象平稳，宜守不宜攻，等待时机'
+        elif score >= 30:
+            ji_xiong_pan_duan = '凶'
+            jian_yi = '卦象偏凶，宜谨慎行事，防小人'
+        else:
+            ji_xiong_pan_duan = '大凶'
+            jian_yi = '卦象大凶，宜韬光养晦，暂避锋芒'
+        
+        # 趋避建议
+        qu_bi = []
+        if yong_shen_wang_shuai in ['死', '囚']:
+            qu_bi.append('用神衰弱，宜补旺用神五行')
+        if shi_ying_relation['关系'] == '应克世':
+            qu_bi.append('应克世，防对方施压，宜退让')
+        if shi_ying_relation['关系'] == '世生应':
+            qu_bi.append('世生应，付出多，宜控制投入')
+        for dy in dong_yao_list:
+            if dy['六亲'] == '兄弟':
+                qu_bi.append('兄弟动，防破财，不宜投资')
+            elif dy['六亲'] == '官鬼':
+                qu_bi.append('官鬼动，防是非，谨言慎行')
+        
+        if not qu_bi:
+            qu_bi.append('卦象无大碍，顺势而为即可')
+        
+        return {
+            '用神旺衰': yong_shen_wang_shuai,
+            '世应关系': shi_ying_relation,
+            '动爻分析': dong_yao_duan,
+            '六神断语': liu_shen_duan,
+            '吉凶评分': score,
+            '吉凶判断': ji_xiong_pan_duan,
+            '建议': jian_yi,
+            '趋避': qu_bi
+        }
 
 
 def liuyao_pan(
@@ -473,6 +674,17 @@ def liuyao_pan(
     yong_shen_yao = [y for y in yao_list if y['六亲'] == yong_shen]
     yong_shen_wang = len(yong_shen_yao) > 0
     
+    # 断卦分析 v3.0.0
+    temp_result = {
+        '六爻': yao_list,
+        '用神': yong_shen,
+        '月支': month_zhi,
+        '日支': day_zhi,
+        '世爻': shi_yao,
+        '应爻': ying_yao,
+    }
+    duan_gua = LiuYaoPan.analyze_duan_gua(temp_result)
+    
     result = {
         '起卦方式': qi_gua_fang_shi,
         '公历时间': dt.strftime('%Y 年 %m 月 %d 日 %H 时 %M 分'),
@@ -490,6 +702,9 @@ def liuyao_pan(
         '问事类型': question,
         '用神': yong_shen,
         '用神爻': yong_shen_yao[0] if yong_shen_yao else None,
+        '月支': month_zhi,
+        '日支': day_zhi,
+        '断卦分析': duan_gua,
     }
     
     return result
@@ -533,17 +748,30 @@ def format_output(result: Dict) -> str:
         output.append(f"• 临六神：{yong['六神']}")
     output.append("")
     output.append("【断卦分析】")
-    output.append("• 用神旺衰：待详细分析")
-    output.append("• 世应关系：待详细分析")
-    output.append("• 动爻影响：待详细分析")
-    output.append("• 吉凶判断：待详细分析")
-    output.append("• 建议：待详细分析")
+    duan_gua = result.get('断卦分析', {})
+    output.append(f"• 用神旺衰：{duan_gua.get('用神旺衰', '待分析')}")
+    shi_ying = duan_gua.get('世应关系', {})
+    output.append(f"• 世应关系：{shi_ying.get('关系', '待分析')}（{shi_ying.get('吉凶', '')}）— {shi_ying.get('说明', '')}")
+    if duan_gua.get('动爻分析'):
+        for dy in duan_gua['动爻分析']:
+            output.append(f"• 动爻：{dy}")
+    if duan_gua.get('六神断语'):
+        for ls in duan_gua['六神断语']:
+            output.append(f"• {ls}")
+    output.append(f"• 吉凶评分：{duan_gua.get('吉凶评分', 50)}/100")
+    output.append(f"• 吉凶判断：{duan_gua.get('吉凶判断', '待分析')}")
+    output.append(f"• 建议：{duan_gua.get('建议', '待分析')}")
+    if duan_gua.get('趋避'):
+        output.append("")
+        output.append("【趋吉避凶】")
+        for tb in duan_gua['趋避']:
+            output.append(f"• {tb}")
     
     return "\n".join(output)
 
 
 def main():
-    parser = argparse.ArgumentParser(description='六爻纳甲排盘工具 v2.0.0')
+    parser = argparse.ArgumentParser(description='六爻纳甲排盘工具 v3.0.0')
     parser.add_argument('--date', '-d', type=str, help='日期时间 (YYYY-MM-DD HH:MM)')
     parser.add_argument('--numbers', '-n', type=str, help='数字起卦 (逗号分隔)')
     parser.add_argument('--coins', '-c', type=str, help='铜钱起卦 (6 次背面数，逗号分隔)')
