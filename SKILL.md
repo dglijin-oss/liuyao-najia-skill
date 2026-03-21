@@ -301,7 +301,7 @@ liuyao-najia-skill/
 
 ## 9. GitHub 仓库
 
-**仓库地址：** https://github.com/tiangong-elder/liuyao-najia-skill
+**仓库地址：** https://github.com/dglijin-oss/liuyao-najia-skill
 
 **安装方式：**
 ```bash

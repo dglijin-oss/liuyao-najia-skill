@@ -20,7 +20,7 @@
 
 ```bash
 # 克隆仓库
-git clone https://github.com/tiangong-elder/liuyao-najia-skill.git
+git clone https://github.com/dglijin-oss/liuyao-najia-skill.git
 cd liuyao-najia-skill
 
 # 无需依赖，纯 Python 实现
