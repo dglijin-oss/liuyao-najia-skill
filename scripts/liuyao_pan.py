@@ -830,3 +830,42 @@ LIUYAO_DUAN_YU_V2 = {
         '用神逢合': '合日应事',
     },
 }
+
+# ============== v3.2.0 综合评分系统 ==============
+
+def calculate_liuyao_score(result: Dict) -> int:
+    """计算六爻综合评分 (0-100)"""
+    score = 50  # 基础分
+    
+    # 用神旺衰 (0-30 分)
+    yong_shen = result.get('用神', {})
+    if yong_shen.get('旺衰') == '旺':
+        score += 30
+    elif yong_shen.get('旺衰') == '相':
+        score += 20
+    elif yong_shen.get('旺衰') == '有气':
+        score += 10
+    
+    # 世应关系 (0-20 分)
+    shi_ying = result.get('世应分析', {})
+    if shi_ying.get('关系') == '应生世':
+        score += 20
+    elif shi_ying.get('关系') == '世应比和':
+        score += 15
+    elif shi_ying.get('关系') == '世克应':
+        score += 10
+    
+    # 六神 (0-15 分)
+    liu_shen = result.get('六神分析', {})
+    if '青龙' in str(liu_shen) or '贵人' in str(liu_shen):
+        score += 15
+    elif '白虎' in str(liu_shen) or '玄武' in str(liu_shen):
+        score -= 10
+    
+    # 特殊格局 (0-15 分)
+    if result.get('格局') == '六合卦':
+        score += 15
+    elif result.get('格局') == '六冲卦':
+        score -= 5
+    
+    return max(0, min(score, 100))
