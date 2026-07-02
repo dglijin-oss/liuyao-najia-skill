@@ -374,30 +374,37 @@ class LiuYaoPan:
     
     @classmethod
     def get_bian_gua(cls, shang_gua: int, xia_gua: int, dong_yao: int) -> str:
-        """获取变卦"""
+        """获取变卦 — 根据动爻位置翻转阴阳，重新查卦名"""
         if dong_yao == 0:
             return '无'
-        
-        # 动爻变阴阳
+
+        # 八卦三爻二进制（从下到上）：乾1=111, 兑2=011, 离3=101, 震4=001,
+        # 巽5=110, 坎6=010, 艮7=100, 坤8=000
+        trigram_bits = {1: [1,1,1], 2: [1,1,0], 3: [1,0,1], 4: [1,0,0],
+                        5: [0,1,1], 6: [0,1,0], 7: [0,0,1], 8: [0,0,0]}
+
+        shang_bits = list(trigram_bits.get(shang_gua, [1,1,1]))
+        xia_bits = list(trigram_bits.get(xia_gua, [1,1,1]))
+
         if dong_yao <= 3:
-            # 下卦动
-            new_xia = xia_gua
-            # 简化处理
+            # 动爻在下卦（1=初爻, 2=二爻, 3=三爻）
+            pos = dong_yao - 1
+            xia_bits[pos] = 1 - xia_bits[pos]
         else:
-            # 上卦动
-            pass
-        
-        # 简化：返回对宫卦
-        gua_name = cls.get_gua_name(shang_gua, xia_gua)
-        gua_gong = cls.get_gua_gong(gua_name)
-        
-        # 游魂归魂处理
-        if gua_gong == '乾' and gua_name == '火地晋':
-            return '水天需'
-        elif gua_gong == '乾' and gua_name == '火天大有':
-            return '火天大有'
-        
-        return '待计算'
+            # 动爻在上卦（4=四爻, 5=五爻, 6=上爻）
+            pos = dong_yao - 4
+            shang_bits[pos] = 1 - shang_bits[pos]
+
+        # 二进制转八卦编号
+        def bits_to_trigram(bits):
+            val = bits[2] * 4 + bits[1] * 2 + bits[0]
+            mapping = {7:1, 3:2, 5:3, 1:4, 6:5, 2:6, 4:7, 0:8}
+            return mapping.get(val, 1)
+
+        new_shang = bits_to_trigram(shang_bits)
+        new_xia = bits_to_trigram(xia_bits)
+
+        return cls.get_gua_name(new_shang, new_xia)
     
     @classmethod
     def get_wang_shuai(cls, yao_wuxing: str, month_zhi: str, day_zhi: str) -> str:
